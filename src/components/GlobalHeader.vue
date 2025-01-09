@@ -4,7 +4,7 @@
       <a-col flex="200px">
         <RouterLink to="/">
           <div class="title-bar">
-            <img class="logo" src="../assets/logo.png" alt="logo">
+            <img class="logo" src="../assets/logo.png" alt="logo" />
             <div class="title">流光云图库</div>
           </div>
         </RouterLink>
@@ -20,7 +20,20 @@
       <a-col flex="120px">
         <div class="user-login-status">
           <div v-if="loginUserStore.loginUser.id">
-            {{ loginUserStore.loginUser.userName ?? '无名' }}
+            <a-dropdown>
+              <ASpace>
+                <a-avatar :src="loginUserStore.loginUser.userAvatar" />
+              </ASpace>
+              {{ loginUserStore.loginUser.userName ?? '无名' }}
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item @click="doLogout">
+                    <LogoutOutlined />
+                    退出登录
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </div>
           <div v-else>
             <a-button type="primary" href="/user/login">登录</a-button>
@@ -29,19 +42,18 @@
       </a-col>
     </a-row>
   </div>
-
-
 </template>
 <script lang="ts" setup>
-import { h, ref } from 'vue';
-import { HomeOutlined} from '@ant-design/icons-vue';
-import { MenuProps } from 'ant-design-vue';
-import { useRouter } from "vue-router";
-import { useLoginUserStore } from "@/stores/user";
-
+import {computed, h, ref} from 'vue'
+import { HomeOutlined } from '@ant-design/icons-vue'
+import { MenuProps, message } from 'ant-design-vue'
+import { useRouter } from 'vue-router'
+import { useLoginUserStore } from '@/stores/user'
+import { userLogoutUsingPost } from '@/api/userController'
+import { LogoutOutlined } from '@ant-design/icons-vue'
 
 const loginUserStore = useLoginUserStore()
-const items = ref<MenuProps['items']>([
+const originItems = [
   {
     key: '/',
     icon: () => h(HomeOutlined),
@@ -49,83 +61,76 @@ const items = ref<MenuProps['items']>([
     title: '主页',
   },
   {
-    key: '/about',
-    label: '关于',
-    title: '关于',
-  },
-  {
-    key: 'sub1',
-    label: 'Navigation Three - Submenu',
-    title: 'Navigation Three - Submenu',
-    children: [
-      {
-        type: 'group',
-        label: 'Item 1',
-        children: [
-          {
-            label: 'Option 1',
-            key: 'setting:1',
-          },
-          {
-            label: 'Option 2',
-            key: 'setting:2',
-          },
-        ],
-      },
-      {
-        type: 'group',
-        label: 'Item 2',
-        children: [
-          {
-            label: 'Option 3',
-            key: 'setting:3',
-          },
-          {
-            label: 'Option 4',
-            key: 'setting:4',
-          },
-        ],
-      },
-    ],
+    key: '/admin/userManage',
+    label: '用户管理',
+    title: '用户管理',
   },
   {
     key: 'others',
     label: h('a', { href: '#', target: '_blank' }, '流光云图库'),
     title: '流光云图库',
   },
-]);
-const router = useRouter();
+]
+
+// 根据权限过滤菜单 限制展示
+const filterMenus = (menus = [] as MenuProps['items']) => {
+  return menus?.filter((menu: any) => {
+    if (menu.key.startsWith('/admin')) {
+      const loginUser = loginUserStore.loginUser
+      if (!loginUser || loginUser.userRole !== 'admin') {
+        return false
+      }
+    }
+    return true
+  })
+}
+
+// 展示在菜单的路由数组
+const items = computed<MenuProps['items']>(() => filterMenus(originItems))
+
+const router = useRouter()
 
 // 当前选中菜单
-const current = ref<string[]>([]);
+const current = ref<string[]>([])
 // 监听路由变化，更新当前选中菜单
 router.afterEach((to, from, next) => {
   current.value = [to.path]
 })
 
-const doMenuClick = ({ key }: {key: string}) => {
+const doMenuClick = ({ key }: { key: string }) => {
   router.push({
     path: key,
-  });
+  })
 }
 
+const doLogout = async () => {
+  const res = await userLogoutUsingPost()
+  console.log(res)
+  if (res.data.code === 0) {
+    loginUserStore.setLoginUser({
+      userName: '未登录',
+    })
+    message.success('退出登陆成功')
+    await router.push('/user/login')
+  } else {
+    message.error('退出登陆失败')
+  }
+}
 </script>
 
 <style scoped>
-.title-bar{
+.title-bar {
   display: flex;
   align-items: center;
 }
 
-.title{
+.title {
   color: black;
   font-size: 18px;
   margin-left: 16px;
 }
 
-.logo{
+.logo {
   height: 48px;
 }
-
 </style>
-
