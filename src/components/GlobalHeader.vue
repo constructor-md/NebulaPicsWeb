@@ -70,6 +70,11 @@ const originItems = [
     label: h('a', { href: '#', target: '_blank' }, '流光云图库'),
     title: '流光云图库',
   },
+  {
+    key: '/admin/pictureManage',
+    label: '图片管理',
+    title: '图片管理',
+  },
 ]
 
 // 根据权限过滤菜单 限制展示
